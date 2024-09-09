@@ -1,0 +1,51 @@
+name: Clippy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "**.lock"
+      - "**.rs"
+      - "**.nix"
+      - "Cargo.toml"
+      - ".github/workflows/clippy.yaml"
+  pull_request:
+    paths:
+      - "**.lock"
+      - "**.rs"
+      - "**.nix"
+      - "Cargo.toml"
+      - ".github/workflows/clippy.yaml"
+  workflow_dispatch:
+
+jobs:
+  clippy:
+    name: Run scan
+
+    runs-on: ubuntu-latest
+
+    permissions:
+      security-events: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v14
+
+      - name: Setup Nix cache
+        uses: DeterminateSystems/magic-nix-cache-action@v8
+
+      - name: Run clippy
+        id: clippy-run
+        run: |
+          nix build --print-build-logs .#check-clippy
+          [ -L result ] || exit 1
+          echo "sarif-file=$(readlink -f result)" >> "$GITHUB_OUTPUT"
+
+      - name: Upload results
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: ${{ steps.clippy-run.outputs.sarif-file }}
+          wait-for-processing: true

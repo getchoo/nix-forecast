@@ -1,0 +1,47 @@
+[package]
+name = "nix-forecast"
+version = "0.1.0"
+authors = [ "Seth <getchoo at tuta dot io>", "nix-forecast Contributors" ]
+edition = "2021"
+description = "Check the forecast for today's Nix builds"
+readme = "README.md"
+repository = "https://github.com/getchoo/nix-forecast"
+license = "MPL-2.0"
+keywords = ["nix"]
+categories = ["command-line-utilities"]
+build = "build.rs"
+
+[dependencies]
+anyhow = "1.0"
+clap = { version = "4.5", features = ["derive"] }
+futures = "0.3"
+indicatif = "0.17"
+num_cpus = "1.16"
+reqwest = { version = "0.12", default-features = false, features = [ 
+  "charset",
+	"http2",
+	"macos-system-configuration",
+	"rustls-tls"
+] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "1.0"
+tokio = { version = "1.40", features = ["macros", "rt-multi-thread"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3" }
+
+[build-dependencies]
+clap = { version = "4.5", features = ["derive"] }
+clap_complete = "4.5"
+
+[lints.clippy]
+cargo = "warn"
+complexity = "warn"
+correctness = "deny"
+pedantic = "warn"
+perf = "warn"
+style = "warn"
+suspicious = "deny"
+
+[lints.rust]
+unsafe_code = "forbid"

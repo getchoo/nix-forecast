@@ -1,0 +1,30 @@
+name: flake.lock
+
+on:
+  schedule:
+    # run every saturday
+    - cron: "0 0 * * 6"
+  workflow_dispatch:
+
+jobs:
+  update:
+    name: Update & make PR
+
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v14
+
+      - uses: DeterminateSystems/update-flake-lock@v24
+        with:
+          commit-msg: "chore(nix): update flake.lock"
+          pr-title: "chore(nix): update flake.lock"
+          token: ${{ github.token }}

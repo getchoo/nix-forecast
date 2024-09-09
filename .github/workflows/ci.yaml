@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "**.lock"
+      - "**.rs"
+      - "**.nix"
+      - "Cargo.toml"
+      - ".github/workflows/ci.yaml"
+  pull_request:
+    paths:
+      - "**.lock"
+      - "**.rs"
+      - "**.nix"
+      - "Cargo.toml"
+      - ".github/workflows/ci.yaml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v14
+
+      - name: Setup Nix cache
+        uses: DeterminateSystems/magic-nix-cache-action@v8
+
+      - name: Run build
+        run: |
+          nix build --print-build-logs .#check-version-test
+
+  format:
+    name: Formatting
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v14
+
+      - name: Setup Nix cache
+        uses: DeterminateSystems/magic-nix-cache-action@v8
+
+      - name: Run flake checks
+        run: |
+          nix build --print-build-logs .#check-formatting
+
+  release-gate:
+    name: CI Release gate
+    needs: [build, format]
+
+    if: ${{ always() }}
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Exit with error
+        if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
+        run: exit 1
