@@ -16,11 +16,14 @@ impl Run for crate::Cli {
 	#[instrument(skip(self))]
 	async fn run(&self) -> Result<()> {
 		let store_paths = if let Some(installables) = self.installables.clone() {
-			installables_paths(installables).await?
+			resolve_installables(installables).await?
 		} else if let Some(configuration) = &self.configuration {
-			configuration_paths(configuration)?
+			println!("❓ Indexing requisites of configuration closure");
+			nix::configuration_closure_paths(configuration)?
 		} else {
-			nix::all_flake_installables(&self.flake)?
+			println!("❓ Indexing all installables of flake `{}`", self.flake);
+			let installables = nix::all_flake_installables(&self.flake)?;
+			resolve_installables(installables).await?
 		};
 
 		check_store_paths(&self.binary_cache, &store_paths, self.show_missing).await?;
@@ -30,9 +33,9 @@ impl Run for crate::Cli {
 }
 
 #[instrument(skip(installables))]
-async fn installables_paths(installables: Vec<String>) -> Result<Vec<String>> {
+async fn resolve_installables(installables: Vec<String>) -> Result<Vec<String>> {
 	println!(
-		"🔃 Attempting to evaluating {} installable(s)",
+		"🔃 Attempting to evaluate {} installable(s)",
 		installables.len()
 	);
 
@@ -53,14 +56,8 @@ async fn installables_paths(installables: Vec<String>) -> Result<Vec<String>> {
 		.await?;
 
 	println!("✅ Evaluated {} installable(s)!", out_paths.len());
-	Ok(out_paths)
-}
 
-#[instrument(skip(configuration_ref))]
-fn configuration_paths(configuration_ref: &str) -> Result<Vec<String>> {
-	println!("❓ Indexing requisites of configuration closure");
-	let closure_paths = nix::configuration_closure_paths(configuration_ref)?;
-	Ok(closure_paths)
+	Ok(out_paths)
 }
 
 #[allow(clippy::cast_precision_loss)]

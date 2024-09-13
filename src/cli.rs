@@ -4,7 +4,6 @@ use clap::Parser;
 #[command(version, about, long_about = None)]
 pub struct Cli {
 	/// A list of Nix installables to look for. If not given, all paths in nixpkgs are checked
-	#[arg(required_unless_present("configuration"))]
 	pub installables: Option<Vec<String>>,
 
 	/// Flake reference pointing to a NixOS or nix-darwin configuration
