@@ -33,13 +33,13 @@ nix-forecast nixpkgs#{hello,gcc,clang,nrr}
 
 
 ```sh
-nix-forecast .#nixosConfigurations.myMachine
+nix-forecast -c ".#nixosConfigurations.myMachine"
 ```
 
 ### nix-darwin configuration
 
 ```sh
-nix-forecast .#darwinConfigurations.myMac
+nix-forecast -c ".#darwinConfigurations.myMac"
 ```
 
 ## Why?
