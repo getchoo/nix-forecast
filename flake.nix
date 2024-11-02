@@ -28,7 +28,7 @@
       ];
 
       forAllSystems = lib.genAttrs allSystems;
-      nixpkgsFor = forAllSystems (system: nixpkgs.legacyPackages.${system});
+      nixpkgsFor = nixpkgs.legacyPackages;
     in
     {
       checks = forAllSystems (
@@ -133,15 +133,10 @@
         let
           pkgs = nixpkgsFor.${system};
           nixForecastPackages = lib.makeScope pkgs.newScope (final: self.overlays.default final pkgs);
-
-          isCompatible = lib.meta.availableOn pkgs.stdenv.hostPlatform;
-          filteredPackages = lib.filterAttrs (
-            _: deriv: isCompatible deriv && lib.isDerivation deriv
-          ) nixForecastPackages;
         in
-        filteredPackages
-        // {
-          default = filteredPackages.nix-forecast or pkgs.emptyFile;
+        {
+          inherit (nixForecastPackages) nix-forecast;
+          default = self.packages.${system}.nix-forecast;
         }
       );
 
@@ -163,8 +158,6 @@
             pname = "nix-forecast";
             inherit (passthru.cargoTOML.package) version;
 
-            cargoLock.lockFile = ./Cargo.lock;
-
             src = nix-filter {
               root = self;
               include = [
@@ -175,12 +168,14 @@
               ];
             };
 
+            cargoLock.lockFile = ./Cargo.lock;
+
             nativeBuildInputs = [
               installShellFiles
               makeBinaryWrapper
             ];
 
-            buildInputs = lib.optionals stdenv.isDarwin [
+            buildInputs = lib.optionals stdenv.hostPlatform.isDarwin [
               darwin.apple_sdk.frameworks.CoreFoundation
               darwin.apple_sdk.frameworks.SystemConfiguration
               darwin.libiconv
