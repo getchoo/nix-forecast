@@ -8,13 +8,6 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tracing::{event, instrument, Level};
 
-/// JSON output of `nix path-info`
-#[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct PathInfo {
-	path: String,
-}
-
 /// JSON output of `nix build`
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -94,11 +87,8 @@ pub fn closure_paths(store_path: &str) -> Result<Vec<String>> {
 		.output()?;
 
 	if output.status.success() {
-		let path_infos: Vec<PathInfo> = serde_json::from_slice(&output.stdout)?;
-		let paths = path_infos
-			.into_iter()
-			.map(|path_info| path_info.path)
-			.collect();
+		let path_infos: HashMap<String, Value> = serde_json::from_slice(&output.stdout)?;
+		let paths = path_infos.into_keys().collect();
 		Ok(paths)
 	} else {
 		let code = output.status.code().unwrap_or(1);
