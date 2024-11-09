@@ -1,0 +1,61 @@
+name: Publish
+
+on:
+  push:
+    tags:
+      - "v?[0-9]+.[0-9]+.[0-9]+*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "The existing tag to publish"
+        type: "string"
+        required: true
+
+jobs:
+  flakehub:
+    name: Publish to FlakeHub
+
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v15
+
+      - name: Push to FlakeHub
+        uses: DeterminateSystems/flakehub-push@v5
+        with:
+          tag: ${{ inputs.tag }}
+          visibility: "public"
+
+  flakestry:
+    name: Publish to Flakestry
+
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@v15
+
+      - name: Push to Flakestry
+        # Flakestry sometimes sends bad responses even when
+        # the flake *has* been published
+        continue-on-error: true
+        uses: flakestry/flakestry-publish@main
+        with:
+          version: ${{ inputs.tag }}
