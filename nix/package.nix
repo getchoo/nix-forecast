@@ -5,26 +5,28 @@
   nix,
   rustPlatform,
   versionCheckHook,
-
-  nix-filter,
-  self,
 }:
 
+let
+  fs = lib.fileset;
+in
 rustPlatform.buildRustPackage rec {
   pname = "nix-forecast";
   inherit (passthru.cargoTOML.package) version;
 
-  src = nix-filter {
-    root = self;
-    include = [
-      "Cargo.toml"
-      "Cargo.lock"
-      "build.rs"
-      "src/"
-    ];
+  src = fs.toSource {
+    root = ../.;
+    fileset = fs.intersection (fs.gitTracked ../.) (
+      fs.unions [
+        ../Cargo.lock
+        ../Cargo.toml
+        ../build.rs
+        ../src
+      ]
+    );
   };
 
-  cargoLock.lockFile = self + "/Cargo.lock";
+  cargoLock.lockFile = ../Cargo.lock;
 
   nativeBuildInputs = [
     installShellFiles
@@ -48,7 +50,7 @@ rustPlatform.buildRustPackage rec {
   };
 
   passthru = {
-    cargoTOML = lib.importTOML (self + "/Cargo.toml");
+    cargoTOML = lib.importTOML ../Cargo.toml;
   };
 
   meta = {

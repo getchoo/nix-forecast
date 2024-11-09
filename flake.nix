@@ -1,16 +1,12 @@
 {
   description = "Check the forecast for today's Nix builds";
 
-  inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-    nix-filter.url = "github:numtide/nix-filter";
-  };
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
 
   outputs =
     {
       self,
       nixpkgs,
-      nix-filter,
     }:
     let
       inherit (nixpkgs) lib;
@@ -142,7 +138,7 @@
       );
 
       overlays.default = final: _: {
-        nix-forecast = final.callPackage ./nix/package.nix { inherit nix-filter self; };
+        nix-forecast = final.callPackage ./nix/package.nix { };
       };
     };
 }
