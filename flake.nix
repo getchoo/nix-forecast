@@ -1,16 +1,12 @@
 {
   description = "Check the forecast for today's Nix builds";
 
-  inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-    nix-filter.url = "github:numtide/nix-filter";
-  };
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
 
   outputs =
     {
       self,
       nixpkgs,
-      nix-filter,
     }:
     let
       inherit (nixpkgs) lib;
@@ -36,16 +32,24 @@
         let
           pkgs = nixpkgsFor.${system};
           packages = self.packages.${system};
+
+          mkCheck =
+            name: deps: script:
+            pkgs.runCommand name { nativeBuildInputs = deps; } ''
+              ${script}
+              touch $out
+            '';
         in
         lib.optionalAttrs (lib.elem system supportedSystems) {
-          version-test = packages.nix-forecast.tests.version;
-
-          clippy = packages.nix-forecast.overrideAttrs (oldAttrs: {
+          clippy = packages.nix-forecast.overrideAttrs {
             pname = "check-clippy";
 
-            nativeBuildInputs = oldAttrs.nativeBuildInputs ++ [
+            nativeBuildInputs = [
+              pkgs.cargo
               pkgs.clippy
               pkgs.clippy-sarif
+              pkgs.rustPlatform.cargoSetupHook
+              pkgs.rustc
               pkgs.sarif-fmt
             ];
 
@@ -57,36 +61,32 @@
                 --tests \
                 --message-format=json \
               | clippy-sarif | tee $out | sarif-fmt
+              runHook postBuild
             '';
 
             dontInstall = true;
             doCheck = false;
+            doInstallCheck = false;
             dontFixup = true;
 
             passthru = { };
             meta = { };
-          });
+          };
 
-          formatting =
-            pkgs.runCommand "check-formatting"
-              {
-                nativeBuildInputs = [
-                  pkgs.cargo
-                  pkgs.nixfmt-rfc-style
-                  pkgs.rustfmt
-                ];
-              }
-              ''
-                cd ${self}
+          rustfmt = mkCheck "check-cargo-fmt" [
+            pkgs.cargo
+            pkgs.rustfmt
+          ] "cd ${self} && cargo fmt -- --check";
 
-                echo "Running cargo fmt"
-                cargo fmt -- --check
+          actionlint = mkCheck "check-actionlint" [
+            pkgs.actionlint
+          ] "actionlint ${self}/.github/workflows/*";
 
-                echo "Running nixfmt..."
-                nixfmt --check  .
+          deadnix = mkCheck "check-deadnix" [ pkgs.deadnix ] "deadnix --fail ${self}";
 
-                touch $out
-              '';
+          nixfmt = mkCheck "check-nixfmt" [ pkgs.nixfmt-rfc-style ] "nixfmt --check ${self}";
+
+          statix = mkCheck "check-statix" [ pkgs.statix ] "statix check ${self}";
         }
       );
 
@@ -120,96 +120,24 @@
 
       formatter = forAllSystems (system: nixpkgsFor.${system}.nixfmt-rfc-style);
 
-      # for CI
-      legacyPackages = forAllSystems (
-        system:
-        lib.optionalAttrs (lib.elem system supportedSystems) (
-          lib.mapAttrs' (name: lib.nameValuePair "check-${name}") self.checks.${system}
-        )
-      );
+      legacyPackages = forAllSystems (system: {
+        nix-forecast-debug = self.packages.${system}.nix-forecast.overrideAttrs (
+          finalAttrs: _: {
+            cargoBuildType = "debug";
+            cargoCheckType = finalAttrs.cargoBuildType;
+          }
+        );
+      });
 
       packages = forAllSystems (
         system:
         let
           pkgs = nixpkgsFor.${system};
-          nixForecastPackages = lib.makeScope pkgs.newScope (final: self.overlays.default final pkgs);
+          pkgs' = import ./default.nix { inherit pkgs; };
         in
-        {
-          inherit (nixForecastPackages) nix-forecast;
-          default = self.packages.${system}.nix-forecast;
-        }
+        pkgs' // { default = pkgs'.nix-forecast; }
       );
 
-      overlays.default = final: _: {
-        nix-forecast = final.callPackage (
-          {
-            lib,
-            stdenv,
-            rustPlatform,
-            darwin,
-            installShellFiles,
-            makeBinaryWrapper,
-            nix,
-            nix-forecast,
-            testers,
-          }:
-
-          rustPlatform.buildRustPackage rec {
-            pname = "nix-forecast";
-            inherit (passthru.cargoTOML.package) version;
-
-            src = nix-filter {
-              root = self;
-              include = [
-                ./Cargo.toml
-                ./Cargo.lock
-                ./build.rs
-                "src"
-              ];
-            };
-
-            cargoLock.lockFile = ./Cargo.lock;
-
-            nativeBuildInputs = [
-              installShellFiles
-              makeBinaryWrapper
-            ];
-
-            buildInputs = lib.optionals stdenv.hostPlatform.isDarwin [
-              darwin.apple_sdk.frameworks.CoreFoundation
-              darwin.apple_sdk.frameworks.SystemConfiguration
-              darwin.libiconv
-            ];
-
-            postInstall = ''
-              wrapProgram $out/bin/nix-forecast --suffix PATH : "${lib.makeBinPath [ nix ]}"
-
-              installShellCompletion --cmd nix-forecast \
-                --bash completions/nix-forecast.bash \
-              	--fish completions/nix-forecast.fish \
-              	--zsh completions/_nix-forecast
-            '';
-
-            env = {
-              COMPLETION_DIR = "completions";
-            };
-
-            passthru = {
-              cargoTOML = lib.importTOML ./Cargo.toml;
-
-              tests.version = testers.testVersion { package = nix-forecast; };
-            };
-
-            meta = {
-              description = "Check the forecast for today's Nix builds";
-              homepage = "https://github.com/getchoo/nix-forecast";
-              changelog = "https://github.com/getchoo/nix-forecast/releases/tag/${version}";
-              license = lib.licenses.mpl20;
-              maintainers = with lib.maintainers; [ getchoo ];
-              mainProgram = "nix-forecast";
-            };
-          }
-        ) { };
-      };
+      overlays.default = final: prev: import ./overlay.nix final prev;
     };
 }
