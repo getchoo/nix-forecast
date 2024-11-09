@@ -36,14 +36,19 @@
         let
           pkgs = nixpkgsFor.${system};
           packages = self.packages.${system};
+
+          mkCheck =
+            name: deps: script:
+            pkgs.runCommand name { nativeBuildInputs = deps; } ''
+              ${script}
+              touch $out
+            '';
         in
         lib.optionalAttrs (lib.elem system supportedSystems) {
-          version-test = packages.nix-forecast.tests.version;
-
           clippy = packages.nix-forecast.overrideAttrs (oldAttrs: {
             pname = "check-clippy";
 
-            nativeBuildInputs = oldAttrs.nativeBuildInputs ++ [
+            nativeBuildInputs = oldAttrs.nativeBuildInputs or [ ] ++ [
               pkgs.clippy
               pkgs.clippy-sarif
               pkgs.sarif-fmt
@@ -57,6 +62,7 @@
                 --tests \
                 --message-format=json \
               | clippy-sarif | tee $out | sarif-fmt
+              runHook postBuild
             '';
 
             dontInstall = true;
@@ -67,26 +73,20 @@
             meta = { };
           });
 
-          formatting =
-            pkgs.runCommand "check-formatting"
-              {
-                nativeBuildInputs = [
-                  pkgs.cargo
-                  pkgs.nixfmt-rfc-style
-                  pkgs.rustfmt
-                ];
-              }
-              ''
-                cd ${self}
+          rustfmt = mkCheck "check-cargo-fmt" [
+            pkgs.cargo
+            pkgs.rustfmt
+          ] "cd ${self} && cargo fmt -- --check";
 
-                echo "Running cargo fmt"
-                cargo fmt -- --check
+          actionlint = mkCheck "check-actionlint" [
+            pkgs.actionlint
+          ] "actionlint ${self}/.github/workflows/*";
 
-                echo "Running nixfmt..."
-                nixfmt --check  .
+          deadnix = mkCheck "check-deadnix" [ pkgs.deadnix ] "deadnix --fail ${self}";
 
-                touch $out
-              '';
+          nixfmt = mkCheck "check-nixfmt" [ pkgs.nixfmt-rfc-style ] "nixfmt --check ${self}";
+
+          statix = mkCheck "check-statix" [ pkgs.statix ] "statix check ${self}";
         }
       );
 
@@ -119,14 +119,6 @@
       );
 
       formatter = forAllSystems (system: nixpkgsFor.${system}.nixfmt-rfc-style);
-
-      # for CI
-      legacyPackages = forAllSystems (
-        system:
-        lib.optionalAttrs (lib.elem system supportedSystems) (
-          lib.mapAttrs' (name: lib.nameValuePair "check-${name}") self.checks.${system}
-        )
-      );
 
       packages = forAllSystems (
         system:
