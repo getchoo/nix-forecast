@@ -129,16 +129,11 @@
         system:
         let
           pkgs = nixpkgsFor.${system};
-          nixForecastPackages = lib.makeScope pkgs.newScope (final: self.overlays.default final pkgs);
+          pkgs' = import ./default.nix { inherit pkgs; };
         in
-        {
-          inherit (nixForecastPackages) nix-forecast;
-          default = self.packages.${system}.nix-forecast;
-        }
+        pkgs' // { default = pkgs'.nix-forecast; }
       );
 
-      overlays.default = final: _: {
-        nix-forecast = final.callPackage ./nix/package.nix { };
-      };
+      overlays.default = final: prev: import ./overlay.nix final prev;
     };
 }
