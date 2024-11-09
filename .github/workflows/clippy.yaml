@@ -40,7 +40,7 @@ jobs:
       - name: Run clippy
         id: clippy-run
         run: |
-          nix build --print-build-logs .#check-clippy
+          nix build --print-build-logs .#checks.x86_64-linux.clippy
           [ -L result ] || exit 1
           echo "sarif-file=$(readlink -f result)" >> "$GITHUB_OUTPUT"
 

@@ -41,12 +41,15 @@
             '';
         in
         lib.optionalAttrs (lib.elem system supportedSystems) {
-          clippy = packages.nix-forecast.overrideAttrs (oldAttrs: {
+          clippy = packages.nix-forecast.overrideAttrs {
             pname = "check-clippy";
 
-            nativeBuildInputs = oldAttrs.nativeBuildInputs or [ ] ++ [
+            nativeBuildInputs = [
+              pkgs.cargo
               pkgs.clippy
               pkgs.clippy-sarif
+              pkgs.rustPlatform.cargoSetupHook
+              pkgs.rustc
               pkgs.sarif-fmt
             ];
 
@@ -63,11 +66,12 @@
 
             dontInstall = true;
             doCheck = false;
+            doInstallCheck = false;
             dontFixup = true;
 
             passthru = { };
             meta = { };
-          });
+          };
 
           rustfmt = mkCheck "check-cargo-fmt" [
             pkgs.cargo
