@@ -3,9 +3,8 @@
   installShellFiles,
   makeBinaryWrapper,
   nix,
-  nix-forecast,
   rustPlatform,
-  testers,
+  versionCheckHook,
 
   nix-filter,
   self,
@@ -32,6 +31,9 @@ rustPlatform.buildRustPackage rec {
     makeBinaryWrapper
   ];
 
+  doInstallCheck = true;
+  nativeInstallCheckInputs = [ versionCheckHook ];
+
   postInstall = ''
     wrapProgram $out/bin/nix-forecast --suffix PATH : ${lib.makeBinPath [ nix ]}
 
@@ -47,8 +49,6 @@ rustPlatform.buildRustPackage rec {
 
   passthru = {
     cargoTOML = lib.importTOML (self + "/Cargo.toml");
-
-    tests.version = testers.testVersion { package = nix-forecast; };
   };
 
   meta = {

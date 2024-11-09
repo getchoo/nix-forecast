@@ -41,7 +41,7 @@ jobs:
 
       - name: Run build
         run: |
-          nix build --print-build-logs .#nix-forecast-debug.passthru.tests
+          nix build --print-build-logs .#nix-forecast-debug
 
   format-and-lint:
     name: Format and lint
