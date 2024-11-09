@@ -120,6 +120,15 @@
 
       formatter = forAllSystems (system: nixpkgsFor.${system}.nixfmt-rfc-style);
 
+      legacyPackages = forAllSystems (system: {
+        nix-forecast-debug = self.packages.${system}.nix-forecast.overrideAttrs (
+          finalAttrs: _: {
+            cargoBuildType = "debug";
+            cargoCheckType = finalAttrs.cargoBuildType;
+          }
+        );
+      });
+
       packages = forAllSystems (
         system:
         let
