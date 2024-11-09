@@ -36,13 +36,15 @@ rustPlatform.buildRustPackage rec {
   doInstallCheck = true;
   nativeInstallCheckInputs = [ versionCheckHook ];
 
+  # NOTE: Yes, we specifically need Nix. Lix does not have the newer
+  # `path-info --json` output used internally
   postInstall = ''
-    wrapProgram $out/bin/nix-forecast --suffix PATH : ${lib.makeBinPath [ nix ]}
+    wrapProgram $out/bin/nix-forecast --prefix PATH : ${lib.makeBinPath [ nix ]}
 
     installShellCompletion --cmd nix-forecast \
       --bash completions/nix-forecast.bash \
-    	--fish completions/nix-forecast.fish \
-    	--zsh completions/_nix-forecast
+      --fish completions/nix-forecast.fish \
+      --zsh completions/_nix-forecast
   '';
 
   env = {
