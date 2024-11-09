@@ -41,10 +41,10 @@ jobs:
 
       - name: Run build
         run: |
-          nix build --print-build-logs .#check-version-test
+          nix build --print-build-logs .#nix-forecast.passthru.tests
 
-  format:
-    name: Formatting
+  format-and-lint:
+    name: Format and lint
 
     runs-on: ubuntu-latest
 
@@ -60,11 +60,11 @@ jobs:
 
       - name: Run flake checks
         run: |
-          nix build --print-build-logs .#check-formatting
+          nix flake check --print-build-logs --show-trace
 
   release-gate:
     name: CI Release gate
-    needs: [build, format]
+    needs: [build, format-and-lint]
 
     if: ${{ always() }}
 
