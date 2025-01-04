@@ -1,6 +1,6 @@
 [package]
 name = "nix-forecast"
-version = "0.1.0"
+version = "0.2.0"
 authors = [ "Seth <getchoo at tuta dot io>", "nix-forecast Contributors" ]
 edition = "2021"
 description = "Check the forecast for today's Nix builds"
