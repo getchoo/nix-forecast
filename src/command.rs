@@ -26,7 +26,7 @@ impl Run for crate::Cli {
 			resolve_installables(installables).await?
 		};
 
-		check_store_paths(&self.binary_cache, &store_paths, self.show_missing).await?;
+		check_store_paths(&self.binary_caches, &store_paths, self.show_missing).await?;
 
 		Ok(())
 	}
@@ -63,12 +63,12 @@ async fn resolve_installables(installables: Vec<String>) -> Result<Vec<String>> 
 #[allow(clippy::cast_precision_loss)]
 #[instrument(skip(store_paths))]
 async fn check_store_paths(
-	binary_cache: &str,
+	binary_caches: &Vec<String>,
 	store_paths: &Vec<String>,
 	show_missing: bool,
 ) -> Result<()> {
 	let num_store_paths = store_paths.len();
-	println!("🌡️ Checking for {num_store_paths} store path(s) in {binary_cache}",);
+	println!("🌡️ Checking for {num_store_paths} store path(s) in: {binary_caches:?}");
 
 	let http = <http::Client as http::Ext>::default();
 	let progress_bar = ProgressBar::new(num_store_paths as u64).with_style(progress_style()?);
@@ -78,7 +78,12 @@ async fn check_store_paths(
 			let http = &http;
 			let progress_bar = &progress_bar;
 			async move {
-				let has_store_path = http.has_store_path(binary_cache, store_path).await?;
+				let mut has_store_path = false;
+				for binary_cache in binary_caches {
+					if http.has_store_path(binary_cache, store_path).await? {
+						has_store_path = true;
+					}
+				}
 				progress_bar.inc(1);
 
 				anyhow::Ok((has_store_path, store_path.as_str()))

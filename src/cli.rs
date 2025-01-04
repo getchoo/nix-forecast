@@ -11,9 +11,14 @@ pub struct Cli {
 	#[arg(short, long, conflicts_with("installables"))]
 	pub configuration: Option<String>,
 
-	/// URL of the substituter to check
-	#[arg(short, long, default_value = "https://cache.nixos.org")]
-	pub binary_cache: String,
+	/// URLs of the substituters to check (can be passed more than once)
+	#[arg(
+		alias = "binary-cache",
+		short,
+		long,
+		default_value = "https://cache.nixos.org"
+	)]
+	pub binary_caches: Vec<String>,
 
 	/// Flake reference of nixpkgs (or other package repository)
 	#[arg(short, long, default_value = "nixpkgs")]

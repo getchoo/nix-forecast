@@ -14,7 +14,7 @@ Arguments:
 
 Options:
   -c, --configuration <CONFIGURATION>  Flake reference pointing to a NixOS or nix-darwin configuration
-  -b, --binary-cache <BINARY_CACHE>    URL of the substituter to check [default: https://cache.nixos.org]
+  -b, --binary-caches <BINARY_CACHES>  URLs of the substituters to check (can be passed more than once) [default: https://cache.nixos.org]
   -f, --flake <FLAKE>                  Flake reference of nixpkgs (or other package repository) [default: nixpkgs]
   -s, --show-missing                   Show a list of store paths not found in the substituter
   -h, --help                           Print help
