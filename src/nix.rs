@@ -3,10 +3,10 @@ use crate::Error;
 
 use std::{collections::HashMap, process::Command};
 
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use tracing::{event, instrument, Level};
+use tracing::{debug, event, instrument, Level};
 
 /// JSON output of `nix build`
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
@@ -15,6 +15,13 @@ struct Build {
 	drv_path: String,
 	/// Derivation output names and their path
 	outputs: HashMap<String, String>,
+}
+
+/// JSON output of `nix path-info` pre Nix 2.19
+#[derive(Clone, Debug, Eq, Hash, PartialEq, PartialOrd, Ord, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct PathInfo {
+	path: String,
 }
 
 #[instrument(skip(installable))]
@@ -87,8 +94,27 @@ pub fn closure_paths(store_path: &str) -> Result<Vec<String>> {
 		.output()?;
 
 	if output.status.success() {
-		let path_infos: HashMap<String, Value> = serde_json::from_slice(&output.stdout)?;
-		let paths = path_infos.into_keys().collect();
+		// NOTE: See https://github.com/getchoo/nix-forecast/issues/26
+		let paths: Vec<String> = match serde_json::from_slice(&output.stdout)? {
+			// Output schema prior to Nix 2.19/currently on Lix
+			Value::Array(paths_info) => {
+				debug!("Detected Nix < 2.19 or Lix");
+				let paths_info: Vec<PathInfo> = serde_json::from_value(Value::Array(paths_info))?;
+				paths_info
+					.into_iter()
+					.map(|path_info| path_info.path)
+					.collect()
+			}
+			// Output schema from Nix 2.19 onwards
+			Value::Object(paths_info) => {
+				debug!("Detected Nix >= 2.19");
+				let paths_info: HashMap<String, Value> =
+					serde_json::from_value(Value::Object(paths_info))?;
+				paths_info.into_keys().collect()
+			}
+			_ => bail!("`nix path-info` output schema is not recognized!"),
+		};
+
 		Ok(paths)
 	} else {
 		let code = output.status.code().unwrap_or(1);
