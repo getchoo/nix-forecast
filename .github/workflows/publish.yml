@@ -27,7 +27,7 @@ jobs:
           ref: ${{ inputs.tag }}
 
       - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@v16
+        uses: cachix/install-nix-action@v31
 
       - name: Push to FlakeHub
         uses: DeterminateSystems/flakehub-push@v5
@@ -50,7 +50,7 @@ jobs:
           ref: ${{ inputs.tag }}
 
       - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@v16
+        uses: cachix/install-nix-action@v31
 
       - name: Push to Flakestry
         # Flakestry sometimes sends bad responses even when
