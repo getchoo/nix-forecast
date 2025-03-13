@@ -6,10 +6,28 @@ updates:
       interval: "weekly"
     commit-message:
       prefix: "ci"
+    groups:
+      actions:
+        patterns:
+          - "*"
 
   - package-ecosystem: "cargo"
     directory: "/"
     schedule:
       interval: "weekly"
     commit-message:
-      prefix: "chore(crates)"
+      prefix: "chore(deps)"
+    groups:
+      security:
+        applies-to: security-updates
+        patterns:
+          - "*"
+      regular:
+        applies-to: version-updates
+        update-types:
+          - minor
+          - patch
+      major:
+        applies-to: version-updates
+        update-types:
+          - major
