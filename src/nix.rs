@@ -120,7 +120,7 @@ pub fn closure_paths(store_path: &str, with_outputs: bool) -> Result<Vec<String>
 /// Get all paths in an installable's closure
 #[instrument(skip(installable))]
 fn installable_closure_paths(installable: &str) -> Result<Vec<String>> {
-	let store_path = drv_path(&installable)?;
+	let store_path = drv_path(installable)?;
 	let paths = closure_paths(&store_path, true)?;
 	let out_paths = strip_drvs(paths);
 
