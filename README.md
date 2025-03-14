@@ -2,6 +2,16 @@
 
 Check the forecast for today's Nix builds with a blazingly fast (🚀🔥🦀) CLI
 
+## What is it?
+
+`nix-forecast` helps you find out what's cached in cache.nixos.org -- or any binary cache of your choosing!
+
+It does this in a few different ways:
+
+- When an installable is passed, the configured binary caches will be checked to see if they have it
+- When a system or home-manager configuration is passed, the number of it's build dependencies that are currently cached will be reported
+- By default, with no arguments passed, `nix-forecast` will try it's best to calculate how much of Nixpkgs itself is cached
+
 ## Usage
 
 ```
