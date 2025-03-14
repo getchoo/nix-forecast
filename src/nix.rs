@@ -3,10 +3,10 @@ use crate::Error;
 
 use std::{collections::HashMap, process::Command};
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use tracing::{debug, event, instrument, Level};
+use tracing::{event, instrument, Level};
 
 /// JSON output of `nix build`
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
@@ -80,40 +80,21 @@ pub fn drv_path(installable: &str) -> Result<String> {
 
 /// Get all paths in a closure at the given store path
 #[instrument(skip(store_path))]
-pub fn closure_paths(store_path: &str) -> Result<Vec<String>> {
-	event!(Level::TRACE, "Running command `nix --extra-experimental-features 'nix-command flakes' path-info --json --recursive {store_path}`");
-	let output = Command::new("nix")
-		.args([
-			"--extra-experimental-features",
-			"nix-command flakes",
-			"path-info",
-			"--json",
-			"--recursive",
-			store_path,
-		])
-		.output()?;
+pub fn closure_paths(store_path: &str, with_outputs: bool) -> Result<Vec<String>> {
+	event!(Level::TRACE, "Querying closure paths");
+
+	let mut args = vec!["--query", "--requisites", store_path];
+
+	if with_outputs {
+		args.push("--include-outputs");
+	}
+
+	let output = Command::new("nix-store").args(args).output()?;
 
 	if output.status.success() {
-		// NOTE: See https://github.com/getchoo/nix-forecast/issues/26
-		let paths: Vec<String> = match serde_json::from_slice(&output.stdout)? {
-			// Output schema prior to Nix 2.19/currently on Lix
-			Value::Array(paths_info) => {
-				debug!("Detected Nix < 2.19 or Lix");
-				let paths_info: Vec<PathInfo> = serde_json::from_value(Value::Array(paths_info))?;
-				paths_info
-					.into_iter()
-					.map(|path_info| path_info.path)
-					.collect()
-			}
-			// Output schema from Nix 2.19 onwards
-			Value::Object(paths_info) => {
-				debug!("Detected Nix >= 2.19");
-				let paths_info: HashMap<String, Value> =
-					serde_json::from_value(Value::Object(paths_info))?;
-				paths_info.into_keys().collect()
-			}
-			_ => bail!("`nix path-info` output schema is not recognized!"),
-		};
+		// Capture paths from command output, strip drvs
+		let stdout = String::from_utf8(output.stdout)?;
+		let paths = stdout.lines().map(ToString::to_string).collect();
 
 		Ok(paths)
 	} else {
@@ -129,9 +110,19 @@ pub fn closure_paths(store_path: &str) -> Result<Vec<String>> {
 pub fn configuration_closure_paths(configuration_ref: &str) -> Result<Vec<String>> {
 	let installable = format!("{configuration_ref}.config.system.build.toplevel");
 	let store_path = drv_path(&installable)?;
-	let paths = closure_paths(&store_path)?;
+	let paths = closure_paths(&store_path, true)?;
+	// Operate only on the out paths of requisites of the closure
+	let out_paths = paths
+		.iter()
+		.filter(|path| {
+			std::path::Path::new(path)
+				.extension()
+				.is_some_and(|ext| !ext.eq_ignore_ascii_case("drv"))
+		})
+		.map(ToString::to_string)
+		.collect();
 
-	Ok(paths)
+	Ok(out_paths)
 }
 
 /// Get all installables available in a given Flake
