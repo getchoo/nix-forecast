@@ -24,6 +24,18 @@ struct PathInfo {
 	path: String,
 }
 
+/// Strip derivations from a list of store paths
+fn strip_drvs(paths: Vec<String>) -> Vec<String> {
+	paths
+		.into_iter()
+		.filter(|path| {
+			std::path::Path::new(path)
+				.extension()
+				.is_some_and(|ext| !ext.eq_ignore_ascii_case("drv"))
+		})
+		.collect()
+}
+
 #[instrument(skip(installable))]
 pub fn dry_build_output(installable: &str) -> Result<Vec<u8>> {
 	event!(Level::TRACE, "Running command `nix build --extra-experimental-features 'nix-command flakes' --dry-run --json {installable}`");
@@ -105,22 +117,30 @@ pub fn closure_paths(store_path: &str, with_outputs: bool) -> Result<Vec<String>
 	}
 }
 
-/// Get all paths in a NixOS or nix-darwin configuration's closure
-#[instrument(skip(configuration_ref))]
-pub fn configuration_closure_paths(configuration_ref: &str) -> Result<Vec<String>> {
-	let installable = format!("{configuration_ref}.config.system.build.toplevel");
+/// Get all paths in an installable's closure
+#[instrument(skip(installable))]
+fn installable_closure_paths(installable: &str) -> Result<Vec<String>> {
 	let store_path = drv_path(&installable)?;
 	let paths = closure_paths(&store_path, true)?;
-	// Operate only on the out paths of requisites of the closure
-	let out_paths = paths
-		.iter()
-		.filter(|path| {
-			std::path::Path::new(path)
-				.extension()
-				.is_some_and(|ext| !ext.eq_ignore_ascii_case("drv"))
-		})
-		.map(ToString::to_string)
-		.collect();
+	let out_paths = strip_drvs(paths);
+
+	Ok(out_paths)
+}
+
+/// Get all paths in a NixOS or nix-darwin configuration's closure
+#[instrument(skip(configuration_ref))]
+pub fn system_configuration_closure_paths(configuration_ref: &str) -> Result<Vec<String>> {
+	let installable = format!("{configuration_ref}.config.system.build.toplevel");
+	let out_paths = installable_closure_paths(&installable)?;
+
+	Ok(out_paths)
+}
+
+/// Get all paths in a home-manager configuration's closure
+#[instrument(skip(configuration_ref))]
+pub fn home_configuration_closure_paths(configuration_ref: &str) -> Result<Vec<String>> {
+	let installable = format!("{configuration_ref}.activationPackage");
+	let out_paths = installable_closure_paths(&installable)?;
 
 	Ok(out_paths)
 }

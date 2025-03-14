@@ -11,6 +11,15 @@ pub struct Cli {
 	#[arg(short, long, conflicts_with("installables"))]
 	pub configuration: Option<String>,
 
+	/// Flake reference pointing to a standalone home-manager configuration
+	#[arg(
+		short = 'o',
+		long,
+		conflicts_with("configuration"),
+		conflicts_with("installables")
+	)]
+	pub home: Option<String>,
+
 	/// URLs of the substituters to check (can be passed more than once)
 	#[arg(
 		alias = "binary-cache",

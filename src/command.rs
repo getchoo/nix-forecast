@@ -19,7 +19,10 @@ impl Run for crate::Cli {
 			resolve_installables(installables).await?
 		} else if let Some(configuration) = &self.configuration {
 			println!("❓ Indexing requisites of configuration closure");
-			nix::configuration_closure_paths(configuration)?
+			nix::system_configuration_closure_paths(configuration)?
+		} else if let Some(home) = &self.home {
+			println!("❓ Indexing requisites of home configuration closure");
+			nix::home_configuration_closure_paths(home)?
 		} else {
 			println!("❓ Indexing all installables of flake `{}`", self.flake);
 			let installables = nix::all_flake_installables(&self.flake)?;
