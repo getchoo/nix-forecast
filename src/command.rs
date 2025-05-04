@@ -18,13 +18,13 @@ impl Run for crate::Cli {
 		let store_paths = if let Some(installables) = self.installables.clone() {
 			resolve_installables(installables).await?
 		} else if let Some(configuration) = &self.configuration {
-			println!("❓ Indexing requisites of configuration closure");
+			eprintln!("❓ Indexing requisites of configuration closure");
 			nix::system_configuration_closure_paths(configuration)?
 		} else if let Some(home) = &self.home {
-			println!("❓ Indexing requisites of home configuration closure");
+			eprintln!("❓ Indexing requisites of home configuration closure");
 			nix::home_configuration_closure_paths(home)?
 		} else {
-			println!("❓ Indexing all installables of flake `{}`", self.flake);
+			eprintln!("❓ Indexing all installables of flake `{}`", self.flake);
 			let installables = nix::all_flake_installables(&self.flake)?;
 			resolve_installables(installables).await?
 		};
@@ -37,7 +37,7 @@ impl Run for crate::Cli {
 
 #[instrument(skip(installables))]
 async fn resolve_installables(installables: Vec<String>) -> Result<Vec<String>> {
-	println!(
+	eprintln!(
 		"🔃 Attempting to evaluate {} installable(s)",
 		installables.len()
 	);
@@ -58,7 +58,7 @@ async fn resolve_installables(installables: Vec<String>) -> Result<Vec<String>> 
 		.try_collect()
 		.await?;
 
-	println!("✅ Evaluated {} installable(s)!", out_paths.len());
+	eprintln!("✅ Evaluated {} installable(s)!", out_paths.len());
 
 	Ok(out_paths)
 }
@@ -71,7 +71,7 @@ async fn check_store_paths(
 	show_missing: bool,
 ) -> Result<()> {
 	let num_store_paths = store_paths.len();
-	println!("🌡️ Checking for {num_store_paths} store path(s) in: {binary_caches:?}");
+	eprintln!("🌡️ Checking for {num_store_paths} store path(s) in: {binary_caches:?}");
 
 	let http = <http::Client as http::Ext>::default();
 	let progress_bar = ProgressBar::new(num_store_paths as u64).with_style(progress_style()?);
@@ -103,7 +103,7 @@ async fn check_store_paths(
 	let num_uncached = uncached_paths.len();
 	let num_cached = num_store_paths - num_uncached;
 
-	println!(
+	eprintln!(
 		"☀️ {:.2}% of paths available ({} out of {})",
 		(num_cached as f32 / num_store_paths as f32) * 100.0,
 		num_cached,
@@ -111,10 +111,8 @@ async fn check_store_paths(
 	);
 
 	if show_missing {
-		println!(
-			"\n⛈️  Found {num_uncached} uncached paths:\n{}",
-			uncached_paths.join("\n")
-		);
+		eprintln!("\n⛈️  Found {num_uncached} uncached paths:");
+		println!("{}", uncached_paths.join("\n"));
 	}
 
 	Ok(())
