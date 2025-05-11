@@ -34,6 +34,14 @@ tracing-subscriber = { version = "0.3" }
 clap = { version = "4.5", features = ["derive"] }
 clap_complete = "4.5"
 
+[[bin]]
+name = "nix-forecast"
+path = "src/main.rs"
+
+[[bin]]
+name = "lix-forecast"
+path = "src/main.rs"
+
 [lints.clippy]
 cargo = "warn"
 complexity = "warn"
