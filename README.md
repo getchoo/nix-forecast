@@ -53,6 +53,15 @@ nix-forecast -c ".#nixosConfigurations.myMachine"
 nix-forecast -c ".#darwinConfigurations.myMac"
 ```
 
+### As a Lix subcommand
+
+> [!NOTE]
+> Requires Lix >= 2.93
+
+```sh
+lix forecast nixpkgs#hello
+```
+
 ## Why?
 
 Finding out if paths are cached can be a bit troublesome in Nix, with commands like `nix build --dry-run`
