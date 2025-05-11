@@ -45,6 +45,8 @@ rustPlatform.buildRustPackage rec {
       --bash completions/nix-forecast.bash \
       --fish completions/nix-forecast.fish \
       --zsh completions/_nix-forecast
+
+    ln -s $out/bin/{n,l}ix-forecast
   '';
 
   env = {
