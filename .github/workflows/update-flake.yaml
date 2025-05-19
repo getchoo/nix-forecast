@@ -23,7 +23,7 @@ jobs:
       - name: Install Nix
         uses: cachix/install-nix-action@v31
 
-      - uses: DeterminateSystems/update-flake-lock@v24
+      - uses: DeterminateSystems/update-flake-lock@v25
         with:
           commit-msg: "chore(nix): update flake.lock"
           pr-title: "chore(nix): update flake.lock"
