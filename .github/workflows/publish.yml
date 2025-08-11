@@ -22,7 +22,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ inputs.tag }}
 
@@ -30,7 +30,7 @@ jobs:
         uses: cachix/install-nix-action@v31
 
       - name: Push to FlakeHub
-        uses: DeterminateSystems/flakehub-push@v5
+        uses: DeterminateSystems/flakehub-push@v6
         with:
           tag: ${{ inputs.tag }}
           visibility: "public"
@@ -45,7 +45,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ inputs.tag }}
 
